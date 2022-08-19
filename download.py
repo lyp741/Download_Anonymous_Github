@@ -2,6 +2,9 @@ import requests
 import json
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
+
+threadPool = ThreadPoolExecutor(max_workers=20, thread_name_prefix="test_")
 
 repo_name = 'Multi-Agent-Transformer-4643'
 
@@ -20,6 +23,16 @@ class DownloadThread(threading.Thread):
         with open(file, 'wb') as f:
             f.write(res.content)
 
+def download(path):
+    file = parent_folder + path
+    filename = file.split('/')[-1]
+    folders = file[:-len(filename)]
+    print(folders)
+    os.makedirs(folders, exist_ok=True)
+    res = requests.get(file_base_url + path, verify=False)
+    with open(file, 'wb') as f:
+        f.write(res.content)
+
 def is_file(child):
     return 'size' in child
 
@@ -36,9 +49,10 @@ threads = []
 
 def get_files(cur, path):
     if is_file(cur):
-        t = DownloadThread(path)
-        t.start()
-        threads.append(t)
+        # t = DownloadThread(path)
+        # t.start()
+        # threads.append(t)
+        threadPool.submit(download, path)
 
     else:
         for child, v in cur.items():
@@ -46,5 +60,6 @@ def get_files(cur, path):
 
 get_files(files, '')
 
-for tt in threads:
-    tt.join()
+threadPool.shutdown(wait=True)
+# for tt in threads:
+#     tt.join()
